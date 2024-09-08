@@ -72,6 +72,7 @@ async function requestMicrophonePermission() {
     if (isCalling) {
       retellWebClient.stopCall();
     } else {
+      setInstructionsVisible(false);
       try {
         await requestMicrophonePermission();
         const registerCallResponse = await registerCall(agentId);
@@ -81,9 +82,11 @@ async function requestMicrophonePermission() {
           });
         } else {
           console.error("No access token received");
+          setInstructionsVisible(true);
         }
       } catch (error) {
         console.error("Error starting call:", error);
+        setInstructionsVisible(true);
       }
     }
   };
@@ -142,7 +145,6 @@ async function requestMicrophonePermission() {
           </div>
           <div className={`instructions ${instructionsVisible ? 'visible' : 'hidden'}`}>
             <p><strong>Click</strong> or <strong>Tap</strong></p>
-            <p>Fiona's portrait to begin</p>
           </div>
         </div>
       </header>
