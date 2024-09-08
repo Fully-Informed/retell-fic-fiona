@@ -13,17 +13,20 @@ const retellWebClient = new RetellWebClient();
 const App = () => {
   const [isCalling, setIsCalling] = useState(false);
   const [isAgentSpeaking, setIsAgentSpeaking] = useState(false);
+  const [instructionsVisible, setInstructionsVisible] = useState(true);
 
   useEffect(() => {
     retellWebClient.on("call_started", () => {
       console.log("call started");
       setIsCalling(true);
+      setInstructionsVisible(false);
     });
 
     retellWebClient.on("call_ended", () => {
       console.log("call ended");
       setIsCalling(false);
       setIsAgentSpeaking(false);
+      setInstructionsVisible(true);
     });
 
     retellWebClient.on("agent_start_talking", () => {
@@ -110,18 +113,37 @@ async function requestMicrophonePermission() {
     }
   }
 
+  const handleTouchStart = (e: React.TouchEvent) => {
+    e.preventDefault();
+    e.currentTarget.classList.add('active');
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    e.preventDefault();
+    e.currentTarget.classList.remove('active');
+    toggleConversation();
+  }; 
+
   return (
     <div className="App">
       <header className="App-header">
-        <div
-          className={`portrait-container ${isCalling ? 'active' : 'inactive'} ${isAgentSpeaking ? 'agent-speaking' : ''}`}
-          onClick={toggleConversation}
-        >
-          <img
-            src="/Fiona_Round.png"
-            alt="AI Agent"
-            className="agent-portrait"
-          />
+        <div className="portrait-wrapper">
+          <div
+            className={`portrait-container ${isCalling ? 'active' : 'inactive'} ${isAgentSpeaking ? 'agent-speaking' : ''}`}
+            onClick={toggleConversation}
+            onTouchStart={handleTouchStart}
+            onTouchEnd={handleTouchEnd}
+          >
+            <img
+              src="/Fiona_Round.png"
+              alt="AI Agent"
+              className="agent-portrait"
+            />
+          </div>
+          <div className={`instructions ${instructionsVisible ? 'visible' : 'hidden'}`}>
+            <p><strong>Click</strong> or <strong>Tap</strong></p>
+            <p>Fiona's portrait to begin</p>
+          </div>
         </div>
       </header>
     </div>
