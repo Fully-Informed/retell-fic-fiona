@@ -139,7 +139,7 @@ async function requestMicrophonePermission() {
           >
             <img
               src="/Fiona_Round.png"
-              alt="AI Agent"
+              alt="Fiona"
               className="agent-portrait"
             />
           </div>
