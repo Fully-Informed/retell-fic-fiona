@@ -137,7 +137,7 @@ async function requestMicrophonePermission() {
             onTouchStart={handleTouchStart}
             onTouchEnd={handleTouchEnd}
           >
-            <div className={`halo ${isCalling ? 'active' : 'inactive'} ${isAgentSpeaking ? 'speaking' : ''}`}></div>
+            <div className={`halo ${isCalling ? 'active' : 'inactive'} ${isAgentSpeaking ? 'speaking' : 'not-speaking'}`}></div>
             <img
               src="/Fiona_Round.png"
               alt="Fiona"
