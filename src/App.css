@@ -102,9 +102,20 @@
   transform: translate(-50%, -50%);
   pointer-events: none;
   z-index: 1;
-  /* Debug: Always show bright red halo */
-  background: red !important;
-  opacity: 0.8 !important;
+  opacity: 0;
+  background: none;
+  transition: opacity 0.3s ease;
+}
+
+.halo.active.not-speaking {
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.4) 60%, transparent 70%);
+  opacity: 1;
+}
+
+.halo.active.speaking {
+  background: radial-gradient(circle, rgba(0, 255, 0, 0.5) 60%, transparent 70%);
+  opacity: 1;
+  animation: halo-pulse 2.5s infinite ease-in-out;
 }
 
 .portrait-container.inactive .agent-portrait {
