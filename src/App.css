@@ -57,11 +57,10 @@
   height: var(--portrait-size);
   border-radius: 50%;
   cursor: pointer;
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  transition: transform 0.3s ease;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: none;
 }
 
 .instructions.visible {
@@ -91,20 +90,31 @@
   filter: saturate(110%);
 }
 
-/* No halo when inactive */
-.portrait-container.inactive {
-  box-shadow: none;
+.halo {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 120%;
+  height: 120%;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  z-index: -1;
 }
 
 /* Grey halo when active but not speaking */
-.portrait-container.active:not(.agent-speaking) {
-  box-shadow: 0 0 20px 10px rgba(255, 255, 255, 0.3);
+.halo.active:not(.speaking) {
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.3) 60%, transparent 70%);
+  opacity: 1;
 }
 
-/* Green halo with pulse when speaking */
-.portrait-container.active.agent-speaking {
-  box-shadow: 0 0 20px 10px rgba(0, 255, 0, 0.4);
-  animation: green-pulse 2.5s infinite ease-in-out;
+/* Green halo when speaking */
+.halo.active.speaking {
+  background: radial-gradient(circle, rgba(0, 255, 0, 0.4) 60%, transparent 70%);
+  opacity: 1;
+  animation: halo-pulse 2.5s infinite ease-in-out;
 }
 
 .portrait-container.inactive .agent-portrait {
@@ -121,12 +131,14 @@
   filter: brightness(1.1);
 }
 
-@keyframes green-pulse {
+@keyframes halo-pulse {
   0%, 100% {
-    box-shadow: 0 0 20px 10px rgba(0, 255, 0, 0.4);
+    background: radial-gradient(circle, rgba(0, 255, 0, 0.4) 60%, transparent 70%);
+    transform: translate(-50%, -50%) scale(1);
   }
   50% {
-    box-shadow: 0 0 30px 15px rgba(0, 255, 0, 0.6);
+    background: radial-gradient(circle, rgba(0, 255, 0, 0.6) 55%, transparent 75%);
+    transform: translate(-50%, -50%) scale(1.05);
   }
 }
 
@@ -136,5 +148,5 @@
 .portrait-container.active.agent-speaking,
 .portrait-container.active:not(.agent-speaking),
 .portrait-container.inactive {
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  transition: transform 0.3s ease;
 }
