@@ -57,10 +57,11 @@
   height: var(--portrait-size);
   border-radius: 50%;
   cursor: pointer;
-  transition: all 0.3s ease, transform 0.3s ease, box-shadow 0.3s ease;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
   display: flex;
   align-items: center;
   justify-content: center;
+  box-shadow: none;
 }
 
 .instructions.visible {
@@ -90,40 +91,20 @@
   filter: saturate(110%);
 }
 
-.portrait-container::before,
-.portrait-container::after {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 100%;
-  height: 100%;
-  border-radius: 50%;
-  -webkit-border-radius: 50%;
-  transform: translate(-50%, -50%);
-  -webkit-transform: translate(-50%, -50%);
-  pointer-events: none;
-  transition: all 0.3s ease, opacity 0.5s ease, box-shadow 0.5s ease;
+/* No halo when inactive */
+.portrait-container.inactive {
+  box-shadow: none;
 }
 
-.portrait-container::before {
+/* Grey halo when active but not speaking */
+.portrait-container.active:not(.agent-speaking) {
   box-shadow: 0 0 20px 10px rgba(255, 255, 255, 0.3);
-  opacity: 0;
 }
 
-.portrait-container.active::before {
-  opacity: 1;
-}
-
-.portrait-container::after {
-  box-shadow: 0 0 20px 10px rgba(0, 255, 0, 0);
-  opacity: 0;
-}
-
-.portrait-container.active.agent-speaking::after {
-  opacity: 1;
-  animation: pulse 2.5s infinite ease-in-out;
-  -webkit-animation: pulse 2.5s infinite ease-in-out;
+/* Green halo with pulse when speaking */
+.portrait-container.active.agent-speaking {
+  box-shadow: 0 0 20px 10px rgba(0, 255, 0, 0.4);
+  animation: green-pulse 2.5s infinite ease-in-out;
 }
 
 .portrait-container.inactive .agent-portrait {
@@ -140,12 +121,12 @@
   filter: brightness(1.1);
 }
 
-@keyframes pulse {
+@keyframes green-pulse {
   0%, 100% {
-    box-shadow: 0 0 20px 10px rgba(0, 255, 0, 0.3);
+    box-shadow: 0 0 20px 10px rgba(0, 255, 0, 0.4);
   }
   50% {
-    box-shadow: 0 0 var(--max-shadow-size) var(--max-shadow-size) rgba(0, 255, 0, 0.3);
+    box-shadow: 0 0 30px 15px rgba(0, 255, 0, 0.6);
   }
 }
 
@@ -155,7 +136,5 @@
 .portrait-container.active.agent-speaking,
 .portrait-container.active:not(.agent-speaking),
 .portrait-container.inactive {
-  transition: all 0.3s ease, transform 0.3s ease, box-shadow 0.3s ease;
-  -webkit-backface-visibility: hidden;
-  backface-visibility: hidden;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
