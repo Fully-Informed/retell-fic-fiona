@@ -101,28 +101,10 @@
   border-radius: 50%;
   transform: translate(-50%, -50%);
   pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.3s ease;
   z-index: 1;
-}
-
-/* Grey halo when active but not speaking */
-.halo.active.not-speaking {
-  background: radial-gradient(circle, rgba(255, 255, 255, 0.5) 60%, transparent 70%);
-  opacity: 1 !important;
-}
-
-/* Green halo when speaking */
-.halo.active.speaking {
-  background: radial-gradient(circle, rgba(0, 255, 0, 0.6) 60%, transparent 70%);
-  opacity: 1 !important;
-  animation: halo-pulse 2.5s infinite ease-in-out;
-}
-
-/* Debug: Make halo always slightly visible for testing */
-.halo {
-  background: radial-gradient(circle, rgba(255, 0, 0, 0.1) 60%, transparent 70%) !important;
-  opacity: 0.3 !important;
+  /* Debug: Always show bright red halo */
+  background: red !important;
+  opacity: 0.8 !important;
 }
 
 .portrait-container.inactive .agent-portrait {
