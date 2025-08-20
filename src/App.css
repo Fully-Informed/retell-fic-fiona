@@ -57,10 +57,14 @@
   height: var(--portrait-size);
   border-radius: 50%;
   cursor: pointer;
-  transition: all 0.3s ease, transform 0.3s ease, box-shadow 0.3s ease;
+  transition: transform 0.3s ease-out;
   display: flex;
   align-items: center;
   justify-content: center;
+  -webkit-transform: translate3d(0, 0, 0);
+  transform: translate3d(0, 0, 0);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
 }
 
 .instructions.visible {
@@ -101,7 +105,11 @@
   border-radius: 50%;
   transform: translate(-50%, -50%);
   pointer-events: none;
-  transition: all 0.3s ease, opacity 0.5s ease, box-shadow 0.5s ease;
+  transition: opacity 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
+  overflow: hidden;
+  -webkit-border-radius: 50%;
+  -webkit-transform: translate(-50%, -50%);
+  will-change: opacity, box-shadow;
 }
 
 .portrait-container::before {
@@ -121,6 +129,9 @@
 .portrait-container.active.agent-speaking::after {
   opacity: 1;
   animation: pulse 2.5s infinite ease-in-out;
+  -webkit-animation: pulse 2.5s infinite ease-in-out;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
 }
 
 .portrait-container.inactive .agent-portrait {
@@ -140,9 +151,11 @@
 @keyframes pulse {
   0%, 100% {
     box-shadow: 0 0 20px 10px rgba(0, 255, 0, 0.3);
+    transform: translate(-50%, -50%) scale(1);
   }
   50% {
     box-shadow: 0 0 var(--max-shadow-size) var(--max-shadow-size) rgba(0, 255, 0, 0.3);
+    transform: translate(-50%, -50%) scale(1);
   }
 }
 
@@ -152,5 +165,7 @@
 .portrait-container.active.agent-speaking,
 .portrait-container.active:not(.agent-speaking),
 .portrait-container.inactive {
-  transition: all 0.3s ease, transform 0.3s ease, box-shadow 0.3s ease;
+  transition: transform 0.3s ease-out, opacity 0.3s ease-out;
+  -webkit-transform: translate3d(0, 0, 0);
+  transform: translate3d(0, 0, 0);
 }
