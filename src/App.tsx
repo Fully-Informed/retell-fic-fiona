@@ -5,8 +5,16 @@ import { RetellWebClient } from "retell-client-js-sdk";
 const agentId = process.env.REACT_APP_RETELL_AGENTID;
 
 interface RegisterCallResponse {
+  call_id: string;
   access_token: string;
+  transport?: "livekit" | "gateway";
+  ice_servers?: RTCIceServer[];
 }
+
+// Agent audio level (RMS) above which Fiona counts as speaking. v3 web calls
+// no longer send agent_start_talking / agent_stop_talking, so the halo is
+// driven by the agent's audio level instead.
+const AGENT_SPEAKING_VOLUME_THRESHOLD = 0.02;
 
 const retellWebClient = new RetellWebClient();
 
@@ -35,28 +43,28 @@ const App = () => {
       setInstructionsVisible(true);
     });
 
-    retellWebClient.on("agent_start_talking", () => {
-      console.log("agent_start_talking");
-      // Clear any pending timeout to stop speaking
-      if (speakingTimeoutRef.current) {
-        clearTimeout(speakingTimeoutRef.current);
-        speakingTimeoutRef.current = null;
+    // Fires every animation frame with a snapshot of the agent's audio
+    // (requires emitRawAudioSamples: true in startCall).
+    retellWebClient.on("audio", (audio: Float32Array) => {
+      let sum = 0;
+      for (let i = 0; i < audio.length; i++) sum += audio[i] * audio[i];
+      const volume = Math.sqrt(sum / audio.length);
+
+      if (volume > AGENT_SPEAKING_VOLUME_THRESHOLD) {
+        // Agent is speaking: clear any pending timeout to stop speaking
+        if (speakingTimeoutRef.current) {
+          clearTimeout(speakingTimeoutRef.current);
+          speakingTimeoutRef.current = null;
+        }
+        setIsAgentSpeaking(true);
+      } else if (!speakingTimeoutRef.current) {
+        // Debounce: wait 400ms before hiding green halo
+        // This prevents flickering on short pauses between words
+        speakingTimeoutRef.current = setTimeout(() => {
+          setIsAgentSpeaking(false);
+          speakingTimeoutRef.current = null;
+        }, 400);
       }
-      setIsAgentSpeaking(true);
-    });
-
-    retellWebClient.on("agent_stop_talking", () => {
-      console.log("agent_stop_talking");
-      // Debounce: wait 400ms before hiding green halo
-      // This prevents flickering on short speech segments
-      speakingTimeoutRef.current = setTimeout(() => {
-        setIsAgentSpeaking(false);
-        speakingTimeoutRef.current = null;
-      }, 400);
-    });
-
-    retellWebClient.on("audio", (audio) => {
-      // Handle audio if needed
     });
 
     retellWebClient.on("update", (update) => {
@@ -101,7 +109,11 @@ async function requestMicrophonePermission() {
         const registerCallResponse = await registerCall(agentId);
         if (registerCallResponse.access_token) {
           await retellWebClient.startCall({
+            callId: registerCallResponse.call_id,
             accessToken: registerCallResponse.access_token,
+            transport: registerCallResponse.transport,
+            iceServers: registerCallResponse.ice_servers,
+            emitRawAudioSamples: true,
           });
         } else {
           console.error("No access token received");
