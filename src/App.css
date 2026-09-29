@@ -94,6 +94,20 @@
 
 .halo {
   --level: 0; /* 0..1, set from App.tsx every frame from the agent's volume */
+
+  /* Speaking (green) layer. All of these can be tuned live with ?tune */
+  --speak-size: 1.15; /* size relative to the grey halo */
+  --speak-swell: 0.06; /* extra growth at full volume */
+  --speak-hue: 120;
+  --speak-lightness: 50%;
+  --speak-alpha: 0.85;
+  --speak-solid: 60%; /* gradient: solid colour up to here... */
+  --speak-fade: 70%; /* ...fading to transparent here */
+
+  /* Listening (grey) layer */
+  --listen-alpha: 0.4;
+  --listen-fade: 1; /* how much the grey fades out as the agent speaks */
+
   position: absolute;
   top: 50%;
   left: 50%;
@@ -122,20 +136,24 @@
 
 /* Grey while listening; fades out as the agent's voice comes in */
 .halo-listening {
-  background: radial-gradient(circle, rgba(255, 255, 255, 0.4) 60%, transparent 70%);
-  opacity: calc(1 - var(--level));
+  background: radial-gradient(circle, rgba(255, 255, 255, var(--listen-alpha)) 60%, transparent 70%);
+  opacity: calc(1 - var(--listen-fade) * var(--level));
 }
 
 /* Green, brightens and swells with the agent's volume */
 .halo-speaking {
-  background: radial-gradient(circle, rgba(0, 255, 0, 0.55) 60%, transparent 70%);
+  background: radial-gradient(
+    circle,
+    hsla(var(--speak-hue), 100%, var(--speak-lightness), var(--speak-alpha)) var(--speak-solid),
+    transparent var(--speak-fade)
+  );
   opacity: var(--level);
-  transform: scale(calc(1 + 0.06 * var(--level)));
+  transform: scale(calc(var(--speak-size) * (1 + var(--speak-swell) * var(--level))));
 }
 
 @media (prefers-reduced-motion: reduce) {
   .halo-speaking {
-    transform: none;
+    transform: scale(var(--speak-size));
   }
 }
 

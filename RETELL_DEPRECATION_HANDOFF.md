@@ -55,9 +55,11 @@ server, and **no new public key or Vercel env var is needed**.
 
 - Click/tap → call connects, agent talks, click again → call ends and the "Click or Tap" instructions come back.
 - The **green halo** follows the agent's voice: grey while listening, green and brighter/larger as the agent
-  speaks louder, fading back to grey shortly after the agent stops. Tuning constants are at the top of
-  `src/App.tsx`: `NOISE_FLOOR` (raise if silence shows green), `FULL_SCALE` (lower if the halo rarely gets
-  bright), `ATTACK_MS` / `RELEASE_MS` (how fast it rises / fades).
+  speaks louder, fading back to grey shortly after the agent stops. To tune it, open the site with `?tune`
+  in the URL: a slider panel adjusts the look (CSS variables on `.halo` in `src/App.css`) and the response
+  to volume (`haloResponse` in `src/App.tsx`) live, during a real call or with simulated speech, and
+  "Copy values" gives the settings to paste back into those two places. The panel lives in
+  `src/HaloTuner.tsx` and is only downloaded when `?tune` is present.
 - In Retell's dashboard, new web calls show up normally. Once both fiona and victor are deployed, the weekly
   "Create Web Call v2" notice should stop (it lists the last request time and source IP).
 

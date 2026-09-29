@@ -1,6 +1,12 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { Suspense, lazy, useCallback, useEffect, useState, useRef } from "react";
 import "./App.css";
 import { RetellWebClient } from "retell-client-js-sdk";
+import type { HaloResponse } from "./HaloTuner.tsx";
+
+// Add ?tune to the URL to show sliders for tuning the speaking halo live.
+// Loaded on demand, so regular visitors never download it.
+const HaloTuner = lazy(() => import("./HaloTuner.tsx"));
+const showTuner = new URLSearchParams(window.location.search).has("tune");
 
 const agentId = process.env.REACT_APP_RETELL_AGENTID;
 
@@ -12,14 +18,19 @@ interface RegisterCallResponse {
 }
 
 // The green halo follows the agent's output volume. Raw RMS is mapped to a
-// 0..1 level: below NOISE_FLOOR is silence (grey halo), FULL_SCALE and above is
+// 0..1 level: below noiseFloor is silence (grey halo), fullScale and above is
 // full green. The level then follows an envelope: it rises quickly when the
-// agent speaks (ATTACK_MS) and fades out gently (RELEASE_MS), so short gaps
-// between words dip the halo instead of switching it off.
-const NOISE_FLOOR = 0.015;
-const FULL_SCALE = 0.12;
-const ATTACK_MS = 60;
-const RELEASE_MS = 250;
+// agent speaks (attackMs) and fades out gently (releaseMs), so short gaps
+// between words dip the halo instead of switching it off. curve < 1 makes
+// quieter speech show more green. The halo's look lives in App.css.
+// Mutable so the ?tune panel can adjust it live.
+const haloResponse: HaloResponse = {
+  noiseFloor: 0.015,
+  fullScale: 0.12,
+  curve: 0.7,
+  attackMs: 60,
+  releaseMs: 250,
+};
 
 const retellWebClient = new RetellWebClient();
 
@@ -28,20 +39,47 @@ const App = () => {
   const [instructionsVisible, setInstructionsVisible] = useState(true);
   const haloRef = useRef<HTMLDivElement>(null);
   const levelRef = useRef(0);
+  const rmsRef = useRef(0);
   const lastFrameTimeRef = useRef<number | null>(null);
+  const processRmsRef = useRef<(rms: number) => void>();
+  const resetHaloRef = useRef<() => void>();
+  const [simulatingSpeech, setSimulatingSpeech] = useState(false);
 
   useEffect(() => {
     // Written straight to a CSS variable: this runs every animation frame, so
     // going through React state would re-render the app ~60 times a second.
     const setHaloLevel = (level: number) => {
       levelRef.current = level;
-      haloRef.current?.style.setProperty("--level", level.toFixed(3));
+      const shown = Math.pow(level, haloResponse.curve);
+      haloRef.current?.style.setProperty("--level", shown.toFixed(3));
     };
 
     const resetHalo = () => {
       lastFrameTimeRef.current = null;
+      rmsRef.current = 0;
       setHaloLevel(0);
     };
+
+    const processRms = (rms: number) => {
+      rmsRef.current = rms;
+      const { noiseFloor, fullScale, attackMs, releaseMs } = haloResponse;
+      const target = Math.min(
+        1,
+        Math.max(0, (rms - noiseFloor) / (fullScale - noiseFloor)),
+      );
+
+      // Frame-rate independent smoothing (frames aren't always 16ms apart).
+      const now = performance.now();
+      const elapsed =
+        lastFrameTimeRef.current === null ? 16 : now - lastFrameTimeRef.current;
+      lastFrameTimeRef.current = now;
+      const timeConstant = target > levelRef.current ? attackMs : releaseMs;
+      const smoothing = 1 - Math.exp(-elapsed / Math.max(timeConstant, 1));
+      setHaloLevel(levelRef.current + (target - levelRef.current) * smoothing);
+    };
+
+    processRmsRef.current = processRms;
+    resetHaloRef.current = resetHalo;
 
     retellWebClient.on("call_started", () => {
       console.log("call started");
@@ -61,20 +99,7 @@ const App = () => {
     retellWebClient.on("audio", (audio: Float32Array) => {
       let sum = 0;
       for (let i = 0; i < audio.length; i++) sum += audio[i] * audio[i];
-      const rms = Math.sqrt(sum / audio.length);
-      const target = Math.min(
-        1,
-        Math.max(0, (rms - NOISE_FLOOR) / (FULL_SCALE - NOISE_FLOOR)),
-      );
-
-      // Frame-rate independent smoothing (frames aren't always 16ms apart).
-      const now = performance.now();
-      const elapsed =
-        lastFrameTimeRef.current === null ? 16 : now - lastFrameTimeRef.current;
-      lastFrameTimeRef.current = now;
-      const timeConstant = target > levelRef.current ? ATTACK_MS : RELEASE_MS;
-      const smoothing = 1 - Math.exp(-elapsed / timeConstant);
-      setHaloLevel(levelRef.current + (target - levelRef.current) * smoothing);
+      processRms(Math.sqrt(sum / audio.length));
     });
 
     retellWebClient.on("update", (update) => {
@@ -98,6 +123,18 @@ const App = () => {
     };
   }, []);
 
+  // Used by the ?tune panel to preview the halo without a call.
+  const feedSimulatedRms = useCallback(
+    (rms: number) => processRmsRef.current?.(rms),
+    [],
+  );
+
+  useEffect(() => {
+    if (!simulatingSpeech) resetHaloRef.current?.();
+  }, [simulatingSpeech]);
+
+  const showCallState = isCalling || simulatingSpeech;
+
 async function requestMicrophonePermission() {
   try {
     await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -111,6 +148,7 @@ async function requestMicrophonePermission() {
     if (isCalling) {
       retellWebClient.stopCall();
     } else {
+      setSimulatingSpeech(false);
       setInstructionsVisible(false);
       try {
         await requestMicrophonePermission();
@@ -171,16 +209,16 @@ async function requestMicrophonePermission() {
   }; 
 
   return (
-    <div className="App">
+    <div className={`App ${showTuner ? 'tuning' : ''}`}>
       <header className="App-header">
         <div className="portrait-wrapper">
           <div
-            className={`portrait-container ${isCalling ? 'active' : 'inactive'}`}
+            className={`portrait-container ${showCallState ? 'active' : 'inactive'}`}
             onClick={toggleConversation}
             onTouchStart={handleTouchStart}
             onTouchEnd={handleTouchEnd}
           >
-            <div ref={haloRef} className={`halo ${isCalling ? 'active' : 'inactive'}`}>
+            <div ref={haloRef} className={`halo ${showCallState ? 'active' : 'inactive'}`}>
               <div className="halo-listening"></div>
               <div className="halo-speaking"></div>
             </div>
@@ -190,11 +228,25 @@ async function requestMicrophonePermission() {
               className="agent-portrait"
             />
           </div>
-          <div className={`instructions ${instructionsVisible ? 'visible' : 'hidden'}`}>
+          <div className={`instructions ${instructionsVisible && !simulatingSpeech ? 'visible' : 'hidden'}`}>
             <p><strong>Click</strong> or <strong>Tap</strong></p>
           </div>
         </div>
       </header>
+      {showTuner && (
+        <Suspense fallback={null}>
+          <HaloTuner
+            haloRef={haloRef}
+            response={haloResponse}
+            rmsRef={rmsRef}
+            levelRef={levelRef}
+            feedRms={feedSimulatedRms}
+            isCalling={isCalling}
+            simulating={simulatingSpeech}
+            setSimulating={setSimulatingSpeech}
+          />
+        </Suspense>
+      )}
     </div>
   );
 };
