@@ -93,29 +93,50 @@
 }
 
 .halo {
+  --level: 0; /* 0..1, set from App.tsx every frame from the agent's volume */
   position: absolute;
   top: 50%;
   left: 50%;
   width: 120%;
   height: 120%;
-  border-radius: 50%;
   transform: translate(-50%, -50%);
   pointer-events: none;
   z-index: 1;
   opacity: 0;
-  background: none;
   transition: opacity 0.3s ease;
 }
 
-.halo.active.not-speaking {
-  background: radial-gradient(circle, rgba(255, 255, 255, 0.4) 60%, transparent 70%);
+.halo.active {
   opacity: 1;
 }
 
-.halo.active.speaking {
-  background: radial-gradient(circle, rgba(0, 255, 0, 0.5) 60%, transparent 70%);
-  opacity: 1;
-  animation: halo-pulse 2.5s infinite ease-in-out;
+.halo-listening,
+.halo-speaking {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+}
+
+/* Grey while listening; fades out as the agent's voice comes in */
+.halo-listening {
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.4) 60%, transparent 70%);
+  opacity: calc(1 - var(--level));
+}
+
+/* Green, brightens and swells with the agent's volume */
+.halo-speaking {
+  background: radial-gradient(circle, rgba(0, 255, 0, 0.55) 60%, transparent 70%);
+  opacity: var(--level);
+  transform: scale(calc(1 + 0.06 * var(--level)));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .halo-speaking {
+    transform: none;
+  }
 }
 
 .portrait-container.inactive .agent-portrait {
@@ -130,24 +151,4 @@
 
 .portrait-container:active .agent-portrait {
   filter: brightness(1.1);
-}
-
-@keyframes halo-pulse {
-  0%, 100% {
-    background: radial-gradient(circle, rgba(0, 255, 0, 0.4) 60%, transparent 70%);
-    transform: translate(-50%, -50%) scale(1);
-  }
-  50% {
-    background: radial-gradient(circle, rgba(0, 255, 0, 0.6) 55%, transparent 75%);
-    transform: translate(-50%, -50%) scale(1.05);
-  }
-}
-
-/* Smooth transitions for all states */
-.portrait-container,
-.portrait-container.active,
-.portrait-container.active.agent-speaking,
-.portrait-container.active:not(.agent-speaking),
-.portrait-container.inactive {
-  transition: transform 0.3s ease;
 }

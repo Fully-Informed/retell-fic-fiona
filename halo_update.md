@@ -1,5 +1,15 @@
 # Halo Effect Implementation for Voice AI Interface
 
+> **Superseded (Retell v3 migration).** Retell v3 web calls no longer send
+> `agent_start_talking` / `agent_stop_talking`, so the on/off classes, the
+> 400ms debounce and the `halo-pulse` keyframes described below were removed.
+> The halo is now driven continuously by the agent's output volume: `App.tsx`
+> smooths the volume into a 0..1 level (fast attack, slow release) and writes it
+> to a `--level` CSS variable; `.halo-listening` (grey) fades out and
+> `.halo-speaking` (green) fades in and swells as `--level` rises. The Safari
+> notes below (real DOM elements and radial gradients, not box-shadow on
+> pseudo-elements) still apply.
+
 ## Problem Statement
 
 The original implementation used CSS pseudo-elements (`::before` and `::after`) with box-shadow effects to create visual halos around the agent portrait. This approach caused significant issues on Safari iOS:

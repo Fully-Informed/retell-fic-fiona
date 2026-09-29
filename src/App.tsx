@@ -11,20 +11,38 @@ interface RegisterCallResponse {
   ice_servers?: RTCIceServer[];
 }
 
-// Agent audio level (RMS) above which Fiona counts as speaking. v3 web calls
-// no longer send agent_start_talking / agent_stop_talking, so the halo is
-// driven by the agent's audio level instead.
-const AGENT_SPEAKING_VOLUME_THRESHOLD = 0.02;
+// The green halo follows the agent's output volume. Raw RMS is mapped to a
+// 0..1 level: below NOISE_FLOOR is silence (grey halo), FULL_SCALE and above is
+// full green. The level then follows an envelope: it rises quickly when the
+// agent speaks (ATTACK_MS) and fades out gently (RELEASE_MS), so short gaps
+// between words dip the halo instead of switching it off.
+const NOISE_FLOOR = 0.015;
+const FULL_SCALE = 0.12;
+const ATTACK_MS = 60;
+const RELEASE_MS = 250;
 
 const retellWebClient = new RetellWebClient();
 
 const App = () => {
   const [isCalling, setIsCalling] = useState(false);
-  const [isAgentSpeaking, setIsAgentSpeaking] = useState(false);
   const [instructionsVisible, setInstructionsVisible] = useState(true);
-  const speakingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const haloRef = useRef<HTMLDivElement>(null);
+  const levelRef = useRef(0);
+  const lastFrameTimeRef = useRef<number | null>(null);
 
   useEffect(() => {
+    // Written straight to a CSS variable: this runs every animation frame, so
+    // going through React state would re-render the app ~60 times a second.
+    const setHaloLevel = (level: number) => {
+      levelRef.current = level;
+      haloRef.current?.style.setProperty("--level", level.toFixed(3));
+    };
+
+    const resetHalo = () => {
+      lastFrameTimeRef.current = null;
+      setHaloLevel(0);
+    };
+
     retellWebClient.on("call_started", () => {
       console.log("call started");
       setIsCalling(true);
@@ -33,13 +51,8 @@ const App = () => {
 
     retellWebClient.on("call_ended", () => {
       console.log("call ended");
-      // Clear any pending speaking timeout
-      if (speakingTimeoutRef.current) {
-        clearTimeout(speakingTimeoutRef.current);
-        speakingTimeoutRef.current = null;
-      }
+      resetHalo();
       setIsCalling(false);
-      setIsAgentSpeaking(false);
       setInstructionsVisible(true);
     });
 
@@ -48,23 +61,20 @@ const App = () => {
     retellWebClient.on("audio", (audio: Float32Array) => {
       let sum = 0;
       for (let i = 0; i < audio.length; i++) sum += audio[i] * audio[i];
-      const volume = Math.sqrt(sum / audio.length);
+      const rms = Math.sqrt(sum / audio.length);
+      const target = Math.min(
+        1,
+        Math.max(0, (rms - NOISE_FLOOR) / (FULL_SCALE - NOISE_FLOOR)),
+      );
 
-      if (volume > AGENT_SPEAKING_VOLUME_THRESHOLD) {
-        // Agent is speaking: clear any pending timeout to stop speaking
-        if (speakingTimeoutRef.current) {
-          clearTimeout(speakingTimeoutRef.current);
-          speakingTimeoutRef.current = null;
-        }
-        setIsAgentSpeaking(true);
-      } else if (!speakingTimeoutRef.current) {
-        // Debounce: wait 400ms before hiding green halo
-        // This prevents flickering on short pauses between words
-        speakingTimeoutRef.current = setTimeout(() => {
-          setIsAgentSpeaking(false);
-          speakingTimeoutRef.current = null;
-        }, 400);
-      }
+      // Frame-rate independent smoothing (frames aren't always 16ms apart).
+      const now = performance.now();
+      const elapsed =
+        lastFrameTimeRef.current === null ? 16 : now - lastFrameTimeRef.current;
+      lastFrameTimeRef.current = now;
+      const timeConstant = target > levelRef.current ? ATTACK_MS : RELEASE_MS;
+      const smoothing = 1 - Math.exp(-elapsed / timeConstant);
+      setHaloLevel(levelRef.current + (target - levelRef.current) * smoothing);
     });
 
     retellWebClient.on("update", (update) => {
@@ -78,15 +88,13 @@ const App = () => {
     retellWebClient.on("error", (error) => {
       console.error("An error occurred:", error);
       retellWebClient.stopCall();
+      resetHalo();
       setIsCalling(false);
-      setIsAgentSpeaking(false);
     });
 
     // Cleanup function
     return () => {
-      if (speakingTimeoutRef.current) {
-        clearTimeout(speakingTimeoutRef.current);
-      }
+      retellWebClient.removeAllListeners();
     };
   }, []);
 
@@ -167,12 +175,15 @@ async function requestMicrophonePermission() {
       <header className="App-header">
         <div className="portrait-wrapper">
           <div
-            className={`portrait-container ${isCalling ? 'active' : 'inactive'} ${isAgentSpeaking ? 'agent-speaking' : ''}`}
+            className={`portrait-container ${isCalling ? 'active' : 'inactive'}`}
             onClick={toggleConversation}
             onTouchStart={handleTouchStart}
             onTouchEnd={handleTouchEnd}
           >
-            <div className={`halo ${isCalling ? 'active' : 'inactive'} ${isAgentSpeaking ? 'speaking' : 'not-speaking'}`}></div>
+            <div ref={haloRef} className={`halo ${isCalling ? 'active' : 'inactive'}`}>
+              <div className="halo-listening"></div>
+              <div className="halo-speaking"></div>
+            </div>
             <img
               src="/Fiona_Round.png"
               alt="Fiona"

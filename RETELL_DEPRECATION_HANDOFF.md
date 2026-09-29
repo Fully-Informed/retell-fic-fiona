@@ -42,20 +42,22 @@ server, and **no new public key or Vercel env var is needed**.
        emitRawAudioSamples: true,
      });
      ```
-   - **Replace the `agent_start_talking` / `agent_stop_talking` handlers** with an audio-level check in the `audio` handler.
-     v3 calls use the `gateway` transport, which does **not** deliver those events (confirmed in the SDK source), so
-     without this the green "speaking" halo would never light up. The `audio` event gives the agent's audio each frame;
-     if its RMS volume is above `AGENT_SPEAKING_VOLUME_THRESHOLD` (0.02) the halo turns on, otherwise the existing
-     400ms debounce turns it off. See fiona's `src/App.tsx` for the exact code to copy.
-   - No markup or CSS changes.
+   - **Replace the `agent_start_talking` / `agent_stop_talking` handlers.** v3 calls use the `gateway`
+     transport, which does **not** deliver those events (confirmed in the SDK source). The halo is now driven
+     continuously by the agent's audio level from the `audio` event: a smoothed 0..1 level is written to a
+     `--level` CSS variable on the halo, and the CSS cross-fades a grey layer into a green one that swells with
+     volume. Copy fiona's `src/App.tsx` (the `audio` handler, `haloRef`, and the halo markup) and the `.halo`
+     rules in `src/App.css` into victor.
 
 4. Verify: `CI=true npm run build` must pass.
 
 ### What to test after deploy
 
 - Click/tap → call connects, agent talks, click again → call ends and the "Click or Tap" instructions come back.
-- The **green halo** turns on while the agent speaks and off during pauses. If it flickers or triggers on
-  background noise/silence, adjust `AGENT_SPEAKING_VOLUME_THRESHOLD` in `src/App.tsx` (higher = less sensitive).
+- The **green halo** follows the agent's voice: grey while listening, green and brighter/larger as the agent
+  speaks louder, fading back to grey shortly after the agent stops. Tuning constants are at the top of
+  `src/App.tsx`: `NOISE_FLOOR` (raise if silence shows green), `FULL_SCALE` (lower if the halo rarely gets
+  bright), `ATTACK_MS` / `RELEASE_MS` (how fast it rises / fades).
 - In Retell's dashboard, new web calls show up normally. Once both fiona and victor are deployed, the weekly
   "Create Web Call v2" notice should stop (it lists the last request time and source IP).
 
