@@ -25,11 +25,11 @@ interface RegisterCallResponse {
 // quieter speech show more green. The halo's look lives in App.css.
 // Mutable so the ?tune panel can adjust it live.
 const haloResponse: HaloResponse = {
-  noiseFloor: 0.015,
-  fullScale: 0.12,
-  curve: 0.7,
-  attackMs: 60,
-  releaseMs: 250,
+  noiseFloor: 0,
+  fullScale: 0.1,
+  curve: 0.75,
+  attackMs: 160,
+  releaseMs: 240,
 };
 
 const retellWebClient = new RetellWebClient();

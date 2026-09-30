@@ -96,8 +96,8 @@
   --level: 0; /* 0..1, set from App.tsx every frame from the agent's volume */
 
   /* Speaking (green) layer. All of these can be tuned live with ?tune */
-  --speak-size: 1.15; /* size relative to the grey halo */
-  --speak-swell: 0.06; /* extra growth at full volume */
+  --speak-size: 1.1; /* size relative to the grey halo */
+  --speak-swell: 0.05; /* extra growth at full volume */
   --speak-hue: 120;
   --speak-lightness: 50%;
   --speak-alpha: 0.85;
@@ -105,7 +105,7 @@
   --speak-fade: 70%; /* ...fading to transparent here */
 
   /* Listening (grey) layer */
-  --listen-alpha: 0.4;
+  --listen-alpha: 0.2;
   --listen-fade: 1; /* how much the grey fades out as the agent speaks */
 
   position: absolute;
